@@ -6,14 +6,26 @@ using Microsoft.EntityFrameworkCore;
 namespace Blog.Controllers
 {
     [ApiController]
+    [Route("")]
     public class CategoryController : ControllerBase
     {
         [HttpGet]
         [Route("v1/categories")]
         public async Task<IActionResult> GetAsync([FromServices] BlogDataContext context)
         {
-            var categories = await context.Categories.ToListAsync();
-            return Ok(categories);
+            try
+            {
+                var categories = await context.Categories.ToListAsync();
+                return Ok(categories);
+            }
+            catch(DbUpdateException ex)
+            {
+                return StatusCode(500, "Não foi possível encontrar as categorias");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro no servidor");
+            }
         }
 
         [HttpGet]
@@ -23,44 +35,88 @@ namespace Blog.Controllers
             [FromServices] BlogDataContext context
             )
         {
-            var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
-            if (category is null) return NotFound("categoria não encontrada");
-            return Ok();
+            try
+            {
+                var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
+                if (category is null) return NotFound("categoria não encontrada");
+                return Ok(category);
+            } 
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, "Não foi possível encontrar a categoria");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro no servidor");
+            }
         }
 
         [HttpPost]
         [Route("v1/categories")]
         public async Task<IActionResult> PostAsync([FromBody] Category category, [FromServices] BlogDataContext context)
         {
-            var contegory = await context.Categories.AddAsync(category);
-            await context.SaveChangesAsync();
-            return Created($"v1/categories/{category.Id}", contegory);
+            try
+            {
+                var contegory = await context.Categories.AddAsync(category);
+                await context.SaveChangesAsync();
+                return Created($"v1/categories/{category.Id}", contegory);
+            } 
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, "Não foi possível criar a categoria");
+            } 
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro no servidor");
+            }
         }
 
         [HttpPut]
-        [Route("v1/categories/{id:int")]
+        [Route("v1/categories/{id:int}")]
         public async Task<IActionResult> PutAsync([FromRoute] int id, [FromBody] Category model,
             [FromServices] BlogDataContext context)
         {
-            var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
-            if (category is null) return NotFound();
+            try
+            {
+                var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
+                if (category is null) return NotFound();
 
-            category.Name = model.Name;
-            category.Slug = model.Slug;
-            context.Categories.Update(category);
-            await context.SaveChangesAsync();
+                category.Name = model.Name;
+                category.Slug = model.Slug;
+                context.Categories.Update(category);
+                await context.SaveChangesAsync();
 
-            return Ok();
+                return Ok();
+            } 
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, "Não foi possível atualizar as categorias");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro no servidor");
+            }
         }
 
         [HttpDelete]
         [Route("v1/categories/{id:int}")]
         public async Task<IActionResult> DeleteAsync([FromRoute] int id, [FromServices] BlogDataContext context)
         {
-            var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
-            if (category is null) return NotFound("Esta categoria não existe");
-            context.Remove(category);
-            return Ok();
+            try
+            {
+                var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
+                if (category is null) return NotFound("Esta categoria não existe");
+                context.Remove(category);
+                return Ok();
+            } 
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, "Não foi possível deletar a categoria");
+            } 
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Ocorreu um erro no servidor");
+            }
         }
 
     }
