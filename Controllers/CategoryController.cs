@@ -1,5 +1,6 @@
 ﻿using Blog.Data;
 using Blog.Models;
+using Blog.ViewModel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,13 +54,19 @@ namespace Blog.Controllers
 
         [HttpPost]
         [Route("v1/categories")]
-        public async Task<IActionResult> PostAsync([FromBody] Category category, [FromServices] BlogDataContext context)
+        public async Task<IActionResult> PostAsync([FromBody] CreateCategoryModel model, [FromServices] BlogDataContext context)
         {
             try
             {
-                var contegory = await context.Categories.AddAsync(category);
+                var category = new Category
+                {
+                    Name = model.Name,
+                    Slug = model.Slug.ToLower()
+                };
+
+                var newCategory = await context.Categories.AddAsync(category);
                 await context.SaveChangesAsync();
-                return Created($"v1/categories/{category.Id}", contegory);
+                return Created($"v1/categories/{category.Id}", newCategory);
             } 
             catch (DbUpdateException ex)
             {
@@ -73,7 +80,7 @@ namespace Blog.Controllers
 
         [HttpPut]
         [Route("v1/categories/{id:int}")]
-        public async Task<IActionResult> PutAsync([FromRoute] int id, [FromBody] Category model,
+        public async Task<IActionResult> PutAsync([FromRoute] int id, [FromBody] CreateCategoryModel model,
             [FromServices] BlogDataContext context)
         {
             try
@@ -82,7 +89,8 @@ namespace Blog.Controllers
                 if (category is null) return NotFound();
 
                 category.Name = model.Name;
-                category.Slug = model.Slug;
+                category.Slug = model.Slug.ToLower();
+
                 context.Categories.Update(category);
                 await context.SaveChangesAsync();
 
