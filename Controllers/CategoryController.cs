@@ -1,4 +1,5 @@
 ﻿using Blog.Data;
+using Blog.Extensions;
 using Blog.Models;
 using Blog.ViewModel;
 using Microsoft.AspNetCore.Mvc;
@@ -17,49 +18,42 @@ namespace Blog.Controllers
             try
             {
                 var categories = await context.Categories.ToListAsync();
-                return Ok(categories);
+                return Ok(new ResultViewModel<List<Category>>(categories));
             }
-            catch(DbUpdateException ex)
+            catch
             {
-                return StatusCode(500, "Não foi possível encontrar as categorias");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, "Ocorreu um erro no servidor");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Falha interna no servidor"));
             }
         }
 
         [HttpGet]
         [Route("v1/categories/{id:int}")]
-        public async Task<IActionResult> GetByIdAsync(
-            [FromRoute] int id, 
-            [FromServices] BlogDataContext context
-            )
+        public async Task<IActionResult> GetByIdAsync([FromRoute] int id, [FromServices] BlogDataContext context)
         {
             try
             {
                 var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
-                if (category is null) return NotFound("categoria não encontrada");
-                return Ok(category);
+                if (category is null) return NotFound(new ResultViewModel<Category>("Não foi possível encontrar a categoria"));
+                return Ok(new ResultViewModel<Category>(category));
             } 
-            catch (DbUpdateException ex)
+            catch
             {
-                return StatusCode(500, "Não foi possível encontrar a categoria");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, "Ocorreu um erro no servidor");
+                return StatusCode(500, new ResultViewModel<Category>("Houve uma falha interna no servidor"));
             }
         }
 
         [HttpPost]
         [Route("v1/categories")]
-        public async Task<IActionResult> PostAsync([FromBody] CreateCategoryModel model, [FromServices] BlogDataContext context)
+        public async Task<IActionResult> PostAsync([FromBody] ChangeCategoryModel model, [FromServices] BlogDataContext context)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(new ResultViewModel<Category>(ModelState.GetErros()));
+
             try
             {
                 var category = new Category
                 {
+                    Id = 0,
                     Name = model.Name,
                     Slug = model.Slug.ToLower()
                 };
@@ -68,25 +62,24 @@ namespace Blog.Controllers
                 await context.SaveChangesAsync();
                 return Created($"v1/categories/{category.Id}", newCategory);
             } 
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
-                return StatusCode(500, "Não foi possível criar a categoria");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Não foi possível gravar esta categoria"));
             } 
-            catch (Exception ex)
+            catch
             {
-                return StatusCode(500, "Ocorreu um erro no servidor");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Falha interna no servidor"));
             }
         }
 
         [HttpPut]
         [Route("v1/categories/{id:int}")]
-        public async Task<IActionResult> PutAsync([FromRoute] int id, [FromBody] CreateCategoryModel model,
-            [FromServices] BlogDataContext context)
+        public async Task<IActionResult> PutAsync([FromRoute] int id, [FromBody] ChangeCategoryModel model, [FromServices] BlogDataContext context)
         {
             try
             {
                 var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
-                if (category is null) return NotFound();
+                if (category is null) return NotFound(new ResultViewModel<List<Category>>("Categoria não encontrada"));
 
                 category.Name = model.Name;
                 category.Slug = model.Slug.ToLower();
@@ -94,15 +87,15 @@ namespace Blog.Controllers
                 context.Categories.Update(category);
                 await context.SaveChangesAsync();
 
-                return Ok();
+                return Ok(new ResultViewModel<Category>(category));
             } 
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
-                return StatusCode(500, "Não foi possível atualizar as categorias");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Não foi possível atualizar esta categoria"));
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return StatusCode(500, "Ocorreu um erro no servidor");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Falha interna no servidor"));
             }
         }
 
@@ -113,17 +106,17 @@ namespace Blog.Controllers
             try
             {
                 var category = await context.Categories.FirstOrDefaultAsync(x => x.Id == id);
-                if (category is null) return NotFound("Esta categoria não existe");
+                if (category is null) return NotFound(new ResultViewModel<Category>("Categoria não encontrada"));
                 context.Remove(category);
-                return Ok();
+                return Ok(new ResultViewModel<Category>(category));
             } 
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
-                return StatusCode(500, "Não foi possível deletar a categoria");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Não foi possível deletar esta categoria, ela não existe"));
             } 
-            catch (Exception ex)
+            catch
             {
-                return StatusCode(500, "Ocorreu um erro no servidor");
+                return StatusCode(500, new ResultViewModel<List<Category>>("Falha interna no servidor"));
             }
         }
 
